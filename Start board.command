@@ -3,13 +3,15 @@
 # If the board is already running it just opens the tab.
 
 cd "$(dirname "$0")" || exit 1
-PORT=8765
+PORT="${BOARD_PORT:-8765}"
 URL="http://localhost:$PORT"
 
 if curl -s -o /dev/null --max-time 2 "$URL"; then
   echo "Board already running."
-  open "$URL"
-  echo "Opened $URL — you can close this window."
+  if command -v open >/dev/null 2>&1; then open "$URL"
+  elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
+  fi
+  echo "Opened $URL. You can close this window."
   sleep 2
   exit 0
 fi

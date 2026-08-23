@@ -472,7 +472,7 @@ async function markSent(num, date) {
 function revealFolder(path) {
   fetch('/api/open', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({path})}).then(r => r.json())
-    .then(d => toast(d.ok ? 'Opened in Finder' : 'Could not open', !d.ok))
+    .then(d => toast(d.ok ? 'Opened folder' : 'Could not open', !d.ok))
     .catch(() => toast('Not connected. Is dashboard/serve.py running?', true));
 }
 

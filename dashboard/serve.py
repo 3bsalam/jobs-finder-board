@@ -10,7 +10,7 @@ state, no command to copy.
 Why a server at all: a page opened as file:// cannot write to disk, which is why
 the old board could only hand you a command. The server also streams the CV and
 cover letter PDFs, because browsers refuse file:// links from an http origin,
-and shells out to `open` to reveal a folder in Finder.
+and shells out to the platform's file manager to reveal a folder.
 
 Binds to 127.0.0.1 only. Nothing is exposed off this machine.
 """
@@ -168,7 +168,18 @@ class Handler(http.server.BaseHTTPRequestHandler):
             target = os.path.realpath(payload.get("path", ""))
             if not target.startswith(os.path.realpath(ROOT)) or not os.path.exists(target):
                 return self._send(404, json.dumps({"ok": False}))
-            subprocess.run(["open", target], check=False)
+            # Cross-platform reveal: macOS, Windows, then freedesktop.
+            if sys.platform == "darwin":
+                cmd = ["open", target]
+            elif os.name == "nt":
+                cmd = ["explorer", target]
+            else:
+                cmd = ["xdg-open", target]
+            try:
+                subprocess.run(cmd, check=False)
+            except FileNotFoundError:
+                return self._send(500, json.dumps(
+                    {"ok": False, "error": "no file manager command available"}))
             return self._send(200, json.dumps({"ok": True}))
 
         self._send(404, json.dumps({"ok": False}))
