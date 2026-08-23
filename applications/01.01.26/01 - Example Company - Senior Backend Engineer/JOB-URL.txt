@@ -1,0 +1,22 @@
+Example Company - Senior Backend Engineer
+
+APPLY (the employer's own page, never the aggregator):
+https://example.com/careers/senior-backend-engineer
+
+Company:  One or two lines. Size, product, funding if relevant.
+Location: QUOTE THE POSTING VERBATIM. This is the field that decides whether
+          the application is worth making at all.
+          e.g. "Remote, anywhere our EOR (Deel) supports"
+Contract: Employee or independent contractor. Employer of record, if any.
+Salary:   Range if published. If not, write NOT DISCLOSED and ask early.
+Reply SLA: When to chase if there is no answer. e.g. chase after 10 working days.
+
+Requirements vs. evidence:
+  Requirement one ......... met, with the specific proof
+  Requirement two ......... partly, be honest about the gap
+  Requirement three ....... not met
+
+Notes: why this is worth applying to, and what to lead with.
+
+Status: to_prepare
+Applied on: ____________

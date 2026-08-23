@@ -1,0 +1,29 @@
+# Your actual job search. Never commit this.
+applications/**
+!applications/01.01.26/
+!applications/01.01.26/**
+!applications/README.md
+
+# Your interview notes
+interview-preparation/**
+!interview-preparation/README.md
+
+# Generated
+dashboard/index.html
+applications/APPLIED-INDEX.md
+
+# Documents
+*.pdf
+*.docx
+!applications/01.01.26/**/*.md
+
+# Local config that may name real companies
+config/connectors.yaml
+
+# Python / OS
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+.env

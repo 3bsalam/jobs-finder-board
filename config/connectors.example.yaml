@@ -1,0 +1,92 @@
+# Job-discovery connectors.
+#
+# Copy to connectors.yaml (gitignored) and edit. Only enable a connector whose
+# actor you have checked is active on the Apify store. Actors are third-party
+# code and they break silently.
+#
+# IMPORTANT: whatever a connector reports as a job's location is DISCOVERY DATA,
+# not evidence. Every role goes through the eligibility gate before you spend an
+# evening on it. Aggregators mis-tag country-locked roles as worldwide
+# constantly, and it is the single most expensive mistake in a job search.
+
+connectors:
+
+  # ---- enabled ----
+
+  apify-linkedin:
+    enabled: true
+    actor_id: "curious_coder/linkedin-jobs-scraper"
+    platform_label: "LinkedIn"
+    # Scrapes the PUBLIC LinkedIn jobs page. No login and no session cookie, so
+    # your own LinkedIn account is never exposed.
+    #
+    # DO NOT swap this for an actor that requires a logged-in account. An
+    # account restriction costs you the profile and the channel.
+    #
+    # Input fields: keywords, location, datePosted
+    #   (anyTime | past24Hours | pastWeek | pastMonth), limitPerSource,
+    #   scrapeCompany (set false, it is much faster).
+
+  apify-indeed:
+    enabled: true
+    actor_id: "valig/indeed-jobs-scraper"
+    platform_label: "Indeed"
+    # Input fields, which are NOT the same shape as the LinkedIn actor:
+    #   country     ISO 3166-1 alpha-2, lowercase. ONE country per run.
+    #   title       job title or keywords
+    #   location    city, state, zip, or the literal string "remote"
+    #   limit       integer, default 100
+    #   datePosted  one of "1" "3" "7" "14" (days), as a STRING not an integer
+    #
+    # Its one real advantage is structured salary
+    # (baseSalary.min / .max / .currencyCode / .unitOfWork) plus an `expired`
+    # flag that catches dead postings before you waste time on one.
+    #
+    # Known traps, all observed in practice:
+    #   1. The same role returns several times under different employer names
+    #      and URLs. Dedupe on normalised title plus salary, not on URL.
+    #   2. Employer names are sometimes wrong in dangerous ways.
+    #   3. The same role appears under several countries with the currency
+    #      relabelled. Country attribution is unreliable.
+    #   4. Results are localised: a non-English country returns local-language
+    #      strings. Normalise before writing to a file.
+
+  # ---- disabled: enable only with the eligibility gate applied hard ----
+
+  apify-weworkremotely:
+    enabled: false
+    remote_board: true
+    # Useful for discovering that a role exists. Worthless as evidence of
+    # eligibility; "Anywhere in the World" is frequently country-locked.
+
+  apify-remoteok:
+    enabled: false
+    remote_board: true
+
+# ---- searches worth running ----
+#
+# Tune to your own stack and constraints. The pattern that matters is scope,
+# not job title.
+#
+# Highest yield found in practice, by a wide margin:
+#   keywords: "<your stack> remote worldwide contractor"   location: Remote
+#
+# Also useful:
+#   keywords: "<your stack>"            location: European Union
+#   keywords: "<your stack>"            location: Canada
+#   keywords: "<your stack> contractor" location: Remote
+#
+# Searching with a location in a region NEAR you, rather than your own country,
+# surfaces roles scoped "EMEA (Remote)" or "MENA (Remote)" that no dedicated
+# remote board lists.
+
+# ---- blacklist ----
+#
+# Companies not to surface again, with the reason. Keeping the reason matters:
+# in six months you will not remember why.
+
+blacklist:
+  - name: "Example Staffing Co"
+    reason: "Rejected 01.01.2026. Vetted-network channel, 0 for 3."
+  - name: "Example Corp"
+    reason: "US only, no sponsorship. Verified on the employer page 01.01.2026."
