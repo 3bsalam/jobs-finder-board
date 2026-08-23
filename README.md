@@ -39,10 +39,42 @@ Keep it in a **private** repository if you want history and a backup.
 
 ## Install
 
-Requires Python 3.9+. No dependencies for the board itself.
+### With Docker (recommended)
+
+Nothing to install but Docker. No Python version to get right, no dependencies.
 
 ```bash
-git clone https://github.com/<you>/jobs-finder-board.git
+git clone https://github.com/3bsalam/jobs-finder-board.git
+cd jobs-finder-board
+UID=$(id -u) GID=$(id -g) docker compose up --build
+```
+
+Then open <http://localhost:8765>.
+
+**Your data stays on your machine.** `applications/` is bind-mounted from the
+host, so the folders are the source of truth exactly as they are without Docker.
+Delete the container whenever you like; nothing of yours is inside it.
+
+Passing `UID` and `GID` makes files written by the container belong to you
+rather than to root. On macOS Docker Desktop it matters less, but it costs
+nothing and saves a permissions problem on Linux.
+
+**One thing does not work in a container:** the **Reveal folder** button. It
+shells out to your file manager, and the container has none. Everything else
+behaves identically, and `applications/` is right there on your host anyway.
+
+The port is published to `127.0.0.1` only, so the board is not reachable from
+your network. `BOARD_HOST=0.0.0.0` inside the container is what lets your host
+reach it at all; it is safe *because* of how the port is published. If you edit
+`compose.yaml` to publish `8765:8765` instead, you put your entire job search on
+your local network.
+
+### Without Docker
+
+Requires Python 3.9+. No dependencies.
+
+```bash
+git clone https://github.com/3bsalam/jobs-finder-board.git
 cd jobs-finder-board
 python3 dashboard/serve.py
 ```
@@ -63,6 +95,9 @@ export RESUME_MARKER="Jane_Doe_Resume"
 
 # change the port
 export BOARD_PORT=8765
+
+# bind address. Leave as loopback unless you are in a container and know why.
+export BOARD_HOST=127.0.0.1
 ```
 
 ### Optional: job-discovery connectors
@@ -110,6 +145,45 @@ aimed wrong. A pile of `rejected` means your applications are landing wrong.
 Those need opposite responses and one column cannot tell you which you have.
 
 ---
+
+## Three ways to add a job
+
+**1. The board.** Click **+ Add job**, fill in company, role and URL.
+
+**2. The command line.**
+
+```bash
+python3 dashboard/add_job.py "Company" "Senior Backend Engineer" "https://apply.url"
+
+# in Docker
+docker compose exec board python dashboard/add_job.py "Company" "Role" "https://apply.url"
+```
+
+Picks the next global number, files it under today's date, writes a `JOB-URL.txt`
+skeleton and refuses a company already on the board.
+
+**3. Hand the link to an AI assistant.**
+
+This is the one the workflow is built around. With the `job-hunt` skill installed
+(see [docs/SKILLS.md](docs/SKILLS.md)), paste a job URL and say:
+
+> add this job to the board: https://example.com/careers/senior-backend-engineer
+
+The assistant reads the posting, runs the eligibility gate against the employer's
+own page rather than an aggregator's tag, creates the folder, fills `JOB-URL.txt`
+with the **quoted** location and contract terms, writes its verdict into
+`NOTES.md`, and rebuilds the board.
+
+You can also point it at a search rather than a single role:
+
+> find remote Rails roles posted this week that can hire someone in <country>
+
+which runs the connectors in [docs/APIFY.md](docs/APIFY.md), applies the gate,
+and adds only the roles that pass.
+
+The value is not the typing it saves. It is that the assistant checks eligibility
+*before* the folder exists, so the board never fills up with roles that were
+never open to you.
 
 ## Command line
 

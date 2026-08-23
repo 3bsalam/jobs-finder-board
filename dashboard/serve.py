@@ -12,7 +12,8 @@ the old board could only hand you a command. The server also streams the CV and
 cover letter PDFs, because browsers refuse file:// links from an http origin,
 and shells out to the platform's file manager to reveal a folder.
 
-Binds to 127.0.0.1 only. Nothing is exposed off this machine.
+Binds to 127.0.0.1 by default. Nothing is exposed off this machine unless
+BOARD_HOST is deliberately changed (see the Docker notes in the README).
 """
 import http.server
 import json
@@ -28,6 +29,13 @@ import webbrowser
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASH = os.path.join(ROOT, "dashboard")
 PORT = int(os.environ.get("BOARD_PORT", "8765"))
+
+# Bind address. Defaults to loopback so the board is never reachable off this
+# machine. Docker needs 0.0.0.0 to reach it from the host, which is safe ONLY
+# because the compose file publishes the port to 127.0.0.1 on the host side.
+# Do not set this to 0.0.0.0 outside a container unless you understand that it
+# exposes your entire job search to your local network.
+HOST = os.environ.get("BOARD_HOST", "127.0.0.1")
 
 sys.path.insert(0, DASH)
 import build as board_build          # noqa: E402
@@ -193,11 +201,14 @@ class Server(socketserver.ThreadingTCPServer):
 if __name__ == "__main__":
     jobs = rebuild()
     url = f"http://localhost:{PORT}"
+    if HOST != "127.0.0.1":
+        print(f"Listening on {HOST}:{PORT}")
     print(f"Job board: {url}   ({len(jobs)} roles)")
     print("Drag a card and it saves immediately. Ctrl-C to stop.")
-    threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+    if os.environ.get("BOARD_NO_BROWSER") != "1":
+        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:
-        with Server(("127.0.0.1", PORT), Handler) as httpd:
+        with Server((HOST, PORT), Handler) as httpd:
             httpd.serve_forever()
     except KeyboardInterrupt:
         print("\nstopped")

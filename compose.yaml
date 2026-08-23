@@ -1,0 +1,31 @@
+services:
+  board:
+    build:
+      context: .
+      args:
+        # Match the container user to yours so files written into applications/
+        # are owned by you on the host. Override with:
+        #   UID=$(id -u) GID=$(id -g) docker compose up --build
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: jobs-finder-board
+    container_name: jobs-finder-board
+
+    # Published to loopback ONLY. Your job search is not on your network.
+    # Changing this to "8765:8765" exposes the board to everyone on your LAN.
+    ports:
+      - "127.0.0.1:8765:8765"
+
+    volumes:
+      # Your data lives on the host, not in the container. Delete the container
+      # whenever you like; the applications folder is the source of truth.
+      - ./applications:/app/applications
+      # Optional: keep connector config on the host too.
+      - ./config:/app/config:ro
+
+    environment:
+      BOARD_PORT: "8765"
+      BOARD_HOST: "0.0.0.0"
+      BOARD_NO_BROWSER: "1"
+
+    restart: unless-stopped
