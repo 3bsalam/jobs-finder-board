@@ -46,7 +46,7 @@ Nothing to install but Docker. No Python version to get right, no dependencies.
 ```bash
 git clone https://github.com/3bsalam/jobs-finder-board.git
 cd jobs-finder-board
-UID=$(id -u) GID=$(id -g) docker compose up --build
+docker compose up --build
 ```
 
 Then open <http://localhost:8765>.
@@ -55,9 +55,19 @@ Then open <http://localhost:8765>.
 host, so the folders are the source of truth exactly as they are without Docker.
 Delete the container whenever you like; nothing of yours is inside it.
 
-Passing `UID` and `GID` makes files written by the container belong to you
-rather than to root. On macOS Docker Desktop it matters less, but it costs
-nothing and saves a permissions problem on Linux.
+**On Linux, set your user IDs first**, or files the container writes into
+`applications/` will be owned by the wrong user and you will not be able to edit
+them:
+
+```bash
+HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose up --build
+```
+
+On macOS you can ignore that: Docker Desktop translates ownership for you.
+
+They are named `HOST_UID` and `HOST_GID` rather than `UID` and `GID` because
+bash makes `UID` readonly, so `UID=$(id -u) docker compose ...` fails with
+`bash: UID: readonly variable`.
 
 **One thing does not work in a container:** the **Reveal folder** button. It
 shells out to your file manager, and the container has none. Everything else
