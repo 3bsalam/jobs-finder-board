@@ -216,11 +216,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             # path here is the container's, not the host's. Say so plainly rather
             # than failing in a way that looks like a bug.
             if in_container():
+                rel = host_path(target)
                 return self._send(200, json.dumps({
                     "ok": False,
                     "reason": "container",
+                    "path": rel,
                     "error": "Running in Docker, so there is no file manager to open. "
-                             "The folder is on your machine at: " + host_path(target),
+                             "The folder is on your machine at: " + rel + ". "
+                             "Documents in this drawer open directly in the browser.",
                 }))
 
             if sys.platform == "darwin":
