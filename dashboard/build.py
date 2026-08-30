@@ -308,7 +308,8 @@ function toast(msg, isErr) {
   t.classList.toggle('err', !!isErr);
   t.classList.add('on');
   clearTimeout(t._t);
-  t._t = setTimeout(() => t.classList.remove('on'), 2200);
+  // Errors can carry a path worth reading, so give them longer on screen.
+  t._t = setTimeout(() => t.classList.remove('on'), isErr ? 7000 : 2200);
 }
 
 async function saveStatus(num, status) {
@@ -472,7 +473,12 @@ async function markSent(num, date) {
 function revealFolder(path) {
   fetch('/api/open', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({path})}).then(r => r.json())
-    .then(d => toast(d.ok ? 'Opened folder' : 'Could not open', !d.ok))
+    .then(d => {
+      if (d.ok) return toast('Opened folder');
+      // The server explains why when it can: in a container there is no file
+      // manager, so show that instead of a bare failure.
+      toast(d.error || 'Could not open', true);
+    })
     .catch(() => toast('Not connected. Is dashboard/serve.py running?', true));
 }
 
