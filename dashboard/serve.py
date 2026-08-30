@@ -43,6 +43,34 @@ import set_status as board_status    # noqa: E402
 import add_job as board_add          # noqa: E402
 
 
+def in_container():
+    """True when running inside Docker or Podman.
+
+    Checked so the Reveal folder button can explain itself instead of silently
+    doing nothing: a container has no desktop, and its paths are not the host's.
+    """
+    if os.environ.get("BOARD_IN_CONTAINER") == "1":
+        return True
+    if os.path.exists("/.dockerenv"):
+        return True
+    try:
+        with open("/proc/1/cgroup", "r", encoding="utf-8", errors="ignore") as fh:
+            return any(m in fh.read() for m in ("docker", "containerd", "kubepods"))
+    except OSError:
+        return False
+
+
+def host_path(target):
+    """Best-effort translation of a container path back to the host checkout.
+
+    Inside the image the project lives at /app, and applications/ is bind-mounted
+    from wherever the user cloned the repo. We cannot know that path, so return
+    something they can act on rather than a container path that will confuse.
+    """
+    rel = os.path.relpath(target, ROOT)
+    return rel if rel != "." else "the project folder"
+
+
 def rebuild():
     jobs = board_build.collect()
     with open(board_build.OUT, "w", encoding="utf-8") as fh:
@@ -173,21 +201,51 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                                "moved_to": os.path.relpath(dest, ROOT)}))
 
         if path == "/api/open":
-            target = os.path.realpath(payload.get("path", ""))
+            raw = (payload.get("path") or "").strip()
+            if not raw:
+                # realpath("") resolves to the process working directory, which
+                # would happily pass the containment check below and open it.
+                return self._send(400, json.dumps(
+                    {"ok": False, "error": "no path given"}))
+            target = os.path.realpath(raw)
             if not target.startswith(os.path.realpath(ROOT)) or not os.path.exists(target):
-                return self._send(404, json.dumps({"ok": False}))
-            # Cross-platform reveal: macOS, Windows, then freedesktop.
+                return self._send(404, json.dumps(
+                    {"ok": False, "error": "no such folder inside the project"}))
+
+            # Inside a container there is no desktop to open anything on, and the
+            # path here is the container's, not the host's. Say so plainly rather
+            # than failing in a way that looks like a bug.
+            if in_container():
+                return self._send(200, json.dumps({
+                    "ok": False,
+                    "reason": "container",
+                    "error": "Running in Docker, so there is no file manager to open. "
+                             "The folder is on your machine at: " + host_path(target),
+                }))
+
             if sys.platform == "darwin":
                 cmd = ["open", target]
             elif os.name == "nt":
-                cmd = ["explorer", target]
+                # explorer.exe needs backslashes, and it exits non-zero even when
+                # it succeeds, so its return code cannot be trusted.
+                cmd = ["explorer", os.path.normpath(target)]
             else:
                 cmd = ["xdg-open", target]
+
             try:
-                subprocess.run(cmd, check=False)
+                completed = subprocess.run(cmd, check=False)
             except FileNotFoundError:
-                return self._send(500, json.dumps(
-                    {"ok": False, "error": "no file manager command available"}))
+                return self._send(200, json.dumps({
+                    "ok": False,
+                    "error": "No file manager found. The folder is at: " + target,
+                }))
+
+            # Windows explorer returns 1 on success. Every other platform means it.
+            if os.name != "nt" and completed.returncode != 0:
+                return self._send(200, json.dumps({
+                    "ok": False,
+                    "error": "Could not open a file manager. The folder is at: " + target,
+                }))
             return self._send(200, json.dumps({"ok": True}))
 
         self._send(404, json.dumps({"ok": False}))

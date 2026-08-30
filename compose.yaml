@@ -4,10 +4,19 @@ services:
       context: .
       args:
         # Match the container user to yours so files written into applications/
-        # are owned by you on the host. Override with:
-        #   UID=$(id -u) GID=$(id -g) docker compose up --build
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
+        # are owned by you on the host rather than by root.
+        #
+        # macOS: ignore this, Docker Desktop handles ownership. Just run
+        #   docker compose up --build
+        #
+        # Linux: set them, or the files will belong to the wrong user:
+        #   HOST_UID=$(id -u) HOST_GID=$(id -g) docker compose up --build
+        #
+        # Note these are HOST_UID/HOST_GID, not UID/GID: bash makes UID a
+        # readonly variable, so `UID=$(id -u) ...` fails with
+        # "bash: UID: readonly variable".
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
     image: jobs-finder-board
     container_name: jobs-finder-board
 
