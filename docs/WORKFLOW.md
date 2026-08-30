@@ -47,13 +47,13 @@ employer's page.
 Ask three questions:
 
 1. **Can they legally engage someone resident where I live?** Employee via an
-   entity or EOR, or independent contractor. If the answer is "only with a visa",
-   stop here.
+   entity or EOR, or independent contractor (see `config/profile.yaml`). If the answer is "only with a visa",
+   stop here. Must be 100% remote with no office visits required.
 2. **Is the time zone workable, honestly?** Not "I could manage", but would you
    keep it up for a year.
 3. **Is the primary language of the codebase one I actually work in?** This is
    the quiet killer. Roles routinely pass the location gate and then fail on
-   stack, so check it at the gate, not after you have written a cover letter.
+   stack, so check it at the gate (see stack constraints in `config/profile.yaml`).
 
 Record the verdict in `JOB-URL.txt` **as a quote from the posting**, so future
 you can see the evidence rather than trusting past you.

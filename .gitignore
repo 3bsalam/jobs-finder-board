@@ -20,6 +20,10 @@ applications/APPLIED-INDEX.md
 # Local config that may name real companies
 config/connectors.yaml
 
+# Private candidate profile / location
+config/profile.yaml
+profile.yaml
+
 # Python / OS
 __pycache__/
 *.pyc
