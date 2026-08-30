@@ -475,11 +475,35 @@ function revealFolder(path) {
     body: JSON.stringify({path})}).then(r => r.json())
     .then(d => {
       if (d.ok) return toast('Opened folder');
-      // The server explains why when it can: in a container there is no file
-      // manager, so show that instead of a bare failure.
+      // In a container there is no file manager to open. The next most useful
+      // thing is the path on the clipboard, ready to paste into Explorer or
+      // Finder. Documents themselves are already openable from this drawer.
+      if (d.reason === 'container' && d.path) {
+        copyText(d.path)
+          .then(() => toast('No file manager in Docker. Path copied: ' + d.path, true))
+          .catch(() => toast(d.error || 'Could not open', true));
+        return;
+      }
       toast(d.error || 'Could not open', true);
     })
     .catch(() => toast('Not connected. Is dashboard/serve.py running?', true));
+}
+
+// navigator.clipboard needs a secure context, which http://localhost counts as,
+// but fall back for anything that does not.
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy') ? resolve() : reject(); }
+    catch (e) { reject(e); }
+    finally { document.body.removeChild(ta); }
+  });
 }
 
 document.getElementById('prepbtn').onclick = () => revealFolder(PREP_DIR);
