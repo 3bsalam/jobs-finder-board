@@ -1,0 +1,30 @@
+# Candidate Profile & Eligibility Gate Criteria
+# Copy to config/profile.yaml (which is gitignored) and customize with your details.
+
+candidate:
+  name: "Candidate Name"
+  
+  # Location & Legal Eligibility
+  residence_country: "Country"        # e.g., Egypt, Germany, Brazil
+  residence_city: "City"              # e.g., Cairo, Berlin
+  timezone: "UTC+2"                   # e.g., EET / UTC+2 / EMEA
+  work_arrangement:
+    - "100% Remote"                   # Must be fully remote, no office visits
+    - "Contractor / B2B"              # Independent contractor
+    - "EOR"                           # Employer of Record (Deel, Remote.com, Oyster, etc.)
+  
+  # Tech Stack & Experience
+  primary_stack:
+    - "React"
+    - "Node"
+    - ".NET"
+    - "Python"
+    - "Go"
+    - "Typescript"
+    - "Javascript"
+  
+  # Dealbreakers / Exclusions (Roles with these will fail the eligibility gate)
+  disallowed_technologies:
+    - "PHP"                           # e.g. Roles requiring AWS (when candidate has Azure)
+  disallowed_arrangements:
+    - "hybrid"

@@ -45,13 +45,15 @@ already solved the legal problem that blocks cross-border hiring.
 tag is discovery data, never evidence. Country-locked roles are tagged
 "worldwide" constantly.
 
+Read candidate constraints from `config/profile.yaml` (private/gitignored) for location, timezone, stack, and hard dealbreakers.
+
 Three questions, all of which must pass:
 
-1. **Can they legally engage someone resident where the candidate lives?**
-   Entity, EOR, or independent contractor. "Only with a visa" is a stop.
-2. **Is the time zone genuinely sustainable?** Not heroically, routinely.
+1. **Can they legally engage someone resident where the candidate lives (`config/profile.yaml`)?**
+   Entity, EOR, or independent contractor. "Only with a visa" is a stop. Must be 100% remote with no office visits required.
+2. **Is the time zone genuinely sustainable?** Not heroically, routinely (match against timezone in profile).
 3. **Is the primary language of the codebase one the candidate works in?**
-   This is the quiet killer: roles pass the location gate and fail on stack.
+   This is the quiet killer: roles pass the location gate and fail on stack. Verify requirements against allowed/disallowed stack in `config/profile.yaml`.
 
 Quote the posting verbatim into `JOB-URL.txt`. Evidence, not recollection.
 
