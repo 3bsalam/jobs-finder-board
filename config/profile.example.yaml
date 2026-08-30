@@ -15,15 +15,16 @@ candidate:
   
   # Tech Stack & Experience
   primary_stack:
+    - "React"
+    - "Node"
     - ".NET"
-    - "C#"
-    - "Azure"
+    - "Python"
+    - "Go"
+    - "Typescript"
+    - "Javascript"
   
   # Dealbreakers / Exclusions (Roles with these will fail the eligibility gate)
   disallowed_technologies:
-    - "AWS"                           # e.g. Roles requiring AWS (when candidate has Azure)
+    - "PHP"                           # e.g. Roles requiring AWS (when candidate has Azure)
   disallowed_arrangements:
     - "hybrid"
-    - "on-site"
-    - "visa sponsorship only"
-    - "specific foreign residency only" # e.g. UK resident only, US citizen only

@@ -6,12 +6,22 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+from filter_jobs import load_profile
+
 TOKEN = os.getenv("APIFY_TOKEN")
 
 def start_run():
+    profile = load_profile()
+    
+    keywords = " ".join(profile["primary_stack"])
+    keywords += " remote worldwide contractor"
+    if profile["disallowed_tech"]:
+        keywords += " -" + " -".join(profile["disallowed_tech"])
+        
     url = f"https://api.apify.com/v2/acts/curious_coder~linkedin-jobs-scraper/runs?token={TOKEN}"
     payload = {
-        "keywords": ".NET remote worldwide contractor -AWS Azure",
+        "keywords": keywords,
         "location": "Remote",
         "datePosted": "pastWeek",
         "limitPerSource": 5,
