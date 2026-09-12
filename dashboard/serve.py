@@ -27,6 +27,16 @@ import urllib.parse
 import webbrowser
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Load .env so APIFY_TOKEN is available without external dependencies
+_env_path = os.path.join(ROOT, ".env")
+if os.path.exists(_env_path):
+    with open(_env_path, encoding="utf-8") as _ef:
+        for _line in _ef:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
 DASH = os.path.join(ROOT, "dashboard")
 PORT = int(os.environ.get("BOARD_PORT", "8765"))
 
@@ -38,9 +48,19 @@ PORT = int(os.environ.get("BOARD_PORT", "8765"))
 HOST = os.environ.get("BOARD_HOST", "127.0.0.1")
 
 sys.path.insert(0, DASH)
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import build as board_build          # noqa: E402
 import set_status as board_status    # noqa: E402
 import add_job as board_add          # noqa: E402
+import search_apify_jobs as apify    # noqa: E402
+
+# ---------------------------------------------------------------------------
+# Background search state
+# ---------------------------------------------------------------------------
+_search_lock = threading.Lock()
+_search_running = False
+_search_log = []       # list of progress messages
+_search_result = None  # final result dict or None
 
 
 def in_container():
@@ -118,6 +138,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             }.get(os.path.splitext(real)[1].lower(), "application/octet-stream")
             with open(real, "rb") as fh:
                 return self._send(200, fh.read(), ctype)
+
+        if path == "/api/search-status":
+            return self._handle_search_status()
 
         self._send(404, b"not found", "text/plain")
 
@@ -248,7 +271,53 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 }))
             return self._send(200, json.dumps({"ok": True}))
 
+        if path == "/api/search":
+            return self._handle_search()
+
+        if path == "/api/search-status":
+            return self._handle_search_status()
+
         self._send(404, json.dumps({"ok": False}))
+
+    # ---- search helpers --------------------------------------------------
+
+    def _handle_search(self):
+        global _search_running, _search_log, _search_result
+        with _search_lock:
+            if _search_running:
+                return self._send(409, json.dumps(
+                    {"ok": False, "error": "A search is already running"}))
+            _search_running = True
+            _search_log = []
+            _search_result = None
+
+        def on_progress(msg):
+            global _search_log
+            _search_log.append(msg)
+
+        def run():
+            global _search_running, _search_result
+            try:
+                result = apify.run_search(on_progress=on_progress)
+                _search_result = result
+                # Rebuild the board after adding new jobs
+                rebuild()
+            except Exception as e:
+                on_progress(f"Fatal error: {e}")
+                _search_result = {"error": str(e), "added": 0, "skipped": 0, "total": 0}
+            finally:
+                _search_running = False
+
+        t = threading.Thread(target=run, daemon=True)
+        t.start()
+        return self._send(200, json.dumps({"ok": True, "message": "Search started"}))
+
+    def _handle_search_status(self):
+        return self._send(200, json.dumps({
+            "running": _search_running,
+            "log": _search_log,
+            "result": _search_result,
+        }))
 
 
 class Server(socketserver.ThreadingTCPServer):
