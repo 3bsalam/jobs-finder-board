@@ -74,6 +74,16 @@ def pay_of(text):
     return out[:34]
 
 
+def parse_job_sort_key(job):
+    parts = job["date"].split(".")
+    if len(parts) == 3:
+        iso_date = f"20{parts[2]}-{parts[1]}-{parts[0]}"
+    else:
+        iso_date = job["date"]
+    num = int(job["num"]) if str(job["num"]).isdigit() else 0
+    return (iso_date, num)
+
+
 def collect():
     jobs = []
     if not os.path.isdir(APPS):
@@ -135,6 +145,7 @@ def collect():
                 "notes": (notes or joburl)[:2000],
                 "mynotes": mynotes,
             })
+    jobs.sort(key=parse_job_sort_key, reverse=True)
     return jobs
 
 
@@ -211,6 +222,41 @@ button.danger.armed{background:var(--rejected);border-color:var(--rejected);colo
 .modal code,.drawer code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
 .empty{color:var(--muted);font-size:12px;text-align:center;padding:14px 8px}
 
+/* Search modal */
+.search-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.97);
+  width:min(600px,94vw);max-height:80vh;background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:22px 24px;box-shadow:var(--shadow-lg);z-index:70;
+  opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;
+  display:flex;flex-direction:column}
+.search-modal.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.search-log{flex:1;overflow-y:auto;max-height:44vh;background:var(--bg);
+  border:1px solid var(--line);border-radius:9px;padding:12px;margin:12px 0;
+  font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);
+  white-space:pre-wrap;word-break:break-word}
+.search-log .added{color:var(--offer);font-weight:600}
+.search-log .skip{color:var(--muted)}
+.search-log .err{color:var(--rejected)}
+.search-log .info{color:var(--accent)}
+.search-status-bar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.search-status-bar .label{font-size:13px;font-weight:600}
+.search-status-bar .sublabel{font-size:12px;color:var(--muted)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.search-result{padding:10px 14px;border-radius:9px;font-size:13px;font-weight:600;
+  margin-top:6px;display:none}
+.search-result.ok{background:color-mix(in srgb,var(--offer) 12%,var(--bg));color:var(--offer);
+  border:1px solid color-mix(in srgb,var(--offer) 30%,var(--line));display:block}
+.search-result.fail{background:color-mix(in srgb,var(--rejected) 12%,var(--bg));color:var(--rejected);
+  border:1px solid color-mix(in srgb,var(--rejected) 30%,var(--line));display:block}
+button.search-btn{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#e040fb));
+  border:none;color:#fff;font-weight:600;gap:6px;display:inline-flex;align-items:center;
+  padding:8px 14px;border-radius:8px;font-size:12.5px;cursor:pointer;
+  transition:filter .15s,transform .1s;box-shadow:0 2px 8px color-mix(in srgb,var(--accent) 30%,transparent)}
+button.search-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+button.search-btn:active{transform:translateY(0)}
+button.search-btn:disabled{opacity:.55;cursor:not-allowed;filter:none;transform:none}
+
 .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(8px);bottom:24px;
  z-index:40;background:var(--panel);border:1px solid var(--line);border-radius:10px;
  padding:9px 15px;box-shadow:var(--shadow-lg);font-size:12.5px;opacity:0;
@@ -271,9 +317,30 @@ select{font:inherit;font-size:12.5px;padding:6px 9px;border-radius:8px;
   <span class="sub">%%COUNT%% roles &middot; %%TODAY%% &middot; saves as you drag</span>
   <span class="spacer"></span>
   <input id="q" placeholder="Search company, role, location, notes...">
+  <button class="search-btn" id="searchbtn" title="Search for new jobs via Apify connectors">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Search jobs
+  </button>
   <button id="prepbtn" title="Open the interview preparation folder">Interview prep</button>
   <button class="primary" id="addbtn">+ Add job</button>
 </header>
+
+<div class="search-modal" id="searchmodal">
+  <div class="search-status-bar">
+    <div class="spinner" id="search_spinner" style="display:none"></div>
+    <span class="label" id="search_title">Search for new jobs</span>
+    <span class="sublabel" id="search_subtitle">Uses your Apify connectors &amp; profile</span>
+  </div>
+  <div class="search-log" id="search_log">Ready to search. Click "Start search" to begin scanning LinkedIn for jobs matching your profile.
+
+Searches configured in connectors.yaml will be used.
+Results are de-duplicated and added to your board automatically.</div>
+  <div class="search-result" id="search_result"></div>
+  <div class="btnrow" style="margin-top:10px">
+    <button class="primary" id="search_start">Start search</button>
+    <button id="search_close">Close</button>
+  </div>
+</div>
 
 <div class="modal" id="addmodal">
   <h3 style="margin-top:0">Add a job</h3>
@@ -349,10 +416,24 @@ function matches(j) {
   return (j.company+' '+j.role+' '+j.location+' '+j.notes).toLowerCase().includes(q);
 }
 
+function parseJobDate(j) {
+  if (!j || !j.date) return '';
+  const p = j.date.split('.');
+  return p.length === 3 ? '20' + p[2] + '-' + p[1] + '-' + p[0] : j.date;
+}
+
 function renderBoard() {
   const visible = JOBS.filter(matches);
   document.getElementById('board').innerHTML = COLUMNS.map(([key,label,desc]) => {
-    const items = visible.filter(j => statusOf(j) === key);
+    let items = visible.filter(j => statusOf(j) === key);
+    if (key === 'to_prepare') {
+      items.sort((a, b) => {
+        const da = parseJobDate(a);
+        const db = parseJobDate(b);
+        if (da !== db) return db.localeCompare(da);
+        return (parseInt(b.num, 10) || 0) - (parseInt(a.num, 10) || 0);
+      });
+    }
     return `<div class="col" data-col="${key}">
       <div class="colhead">
         <div class="t"><span class="dot" style="background:var(--${key})"></span>${label}
@@ -617,11 +698,106 @@ document.getElementById('a_create').onclick = async () => {
   }
 };
 
-document.getElementById('scrim').onclick = () => { closeDrawer(); closeAdd(); };
+document.getElementById('scrim').onclick = () => { closeDrawer(); closeAdd(); if (typeof closeSearch==='function') closeSearch(); };
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeDrawer(); closeAdd(); }
+  if (e.key === 'Escape') { closeDrawer(); closeAdd(); if (typeof closeSearch==='function') closeSearch(); }
 });
 document.getElementById('q').oninput = renderBoard;
+
+// ---- search jobs -----------------------------------------------------------
+let _searchPoll = null;
+function openSearch() {
+  document.getElementById('searchmodal').classList.add('on');
+  document.getElementById('scrim').classList.add('on');
+}
+function closeSearch() {
+  document.getElementById('searchmodal').classList.remove('on');
+  document.getElementById('scrim').classList.remove('on');
+  if (_searchPoll) { clearInterval(_searchPoll); _searchPoll = null; }
+}
+document.getElementById('searchbtn').onclick = openSearch;
+document.getElementById('search_close').onclick = closeSearch;
+
+function colorLine(line) {
+  if (line.startsWith('  + Added:')) return '<span class="added">' + esc(line) + '</span>';
+  if (line.startsWith('  ~ Skipped:')) return '<span class="skip">' + esc(line) + '</span>';
+  if (line.toLowerCase().includes('error')) return '<span class="err">' + esc(line) + '</span>';
+  if (line.startsWith('[')) return '<span class="info">' + esc(line) + '</span>';
+  return esc(line);
+}
+
+document.getElementById('search_start').onclick = async () => {
+  const btn = document.getElementById('search_start');
+  const log = document.getElementById('search_log');
+  const spinner = document.getElementById('search_spinner');
+  const title = document.getElementById('search_title');
+  const subtitle = document.getElementById('search_subtitle');
+  const result = document.getElementById('search_result');
+  btn.disabled = true;
+  btn.textContent = 'Searching...';
+  spinner.style.display = '';
+  title.textContent = 'Searching...';
+  subtitle.textContent = 'This may take several minutes';
+  log.innerHTML = '';
+  result.className = 'search-result';
+  result.style.display = 'none';
+  let lastLen = 0;
+
+  try {
+    const r = await fetch('/api/search', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const d = await r.json();
+    if (!d.ok) {
+      log.textContent = 'Error: ' + (d.error || 'failed to start');
+      btn.disabled = false; btn.textContent = 'Start search';
+      spinner.style.display = 'none';
+      title.textContent = 'Search failed';
+      return;
+    }
+  } catch (e) {
+    log.textContent = 'Could not connect. Is serve.py running?';
+    btn.disabled = false; btn.textContent = 'Start search';
+    spinner.style.display = 'none';
+    return;
+  }
+
+  _searchPoll = setInterval(async () => {
+    try {
+      const r = await fetch('/api/search-status');
+      const d = await r.json();
+      if (d.log && d.log.length > lastLen) {
+        const newLines = d.log.slice(lastLen);
+        lastLen = d.log.length;
+        for (const line of newLines) {
+          log.innerHTML += colorLine(line) + '\n';
+        }
+        log.scrollTop = log.scrollHeight;
+      }
+      if (!d.running) {
+        clearInterval(_searchPoll); _searchPoll = null;
+        spinner.style.display = 'none';
+        btn.disabled = false; btn.textContent = 'Start search';
+        if (d.result) {
+          if (d.result.error) {
+            title.textContent = 'Search failed';
+            result.textContent = d.result.error;
+            result.className = 'search-result fail';
+          } else {
+            title.textContent = 'Search complete';
+            subtitle.textContent = `${d.result.added} added, ${d.result.skipped} skipped`;
+            result.textContent = `✓ Added ${d.result.added} new jobs to your board (${d.result.total} found, ${d.result.skipped} skipped/duplicates)`;
+            result.className = 'search-result ok';
+            if (d.result.added > 0) {
+              setTimeout(() => location.reload(), 1500);
+            }
+          }
+        } else {
+          title.textContent = 'Search complete';
+        }
+      }
+    } catch (e) { /* poll quietly */ }
+  }, 1500);
+};
+
 renderBoard();
 </script></body></html>
 """

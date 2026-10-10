@@ -31,10 +31,13 @@ services:
       - ./applications:/app/applications
       # Optional: keep connector config on the host too.
       - ./config:/app/config:ro
+      # Pass the .env file so the Python env-loader fallback also works.
+      - ./.env:/app/.env:ro
 
     environment:
       BOARD_PORT: "8765"
       BOARD_HOST: "0.0.0.0"
       BOARD_NO_BROWSER: "1"
+      APIFY_TOKEN: ${APIFY_TOKEN}
 
     restart: unless-stopped
