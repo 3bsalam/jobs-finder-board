@@ -18,6 +18,7 @@ applications/APPLIED-INDEX.md
 !applications/01.01.26/**/*.md
 
 # Local config that may name real companies
+inbox-actions*.json
 config/connectors.yaml
 
 # Private candidate profile / location

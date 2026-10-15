@@ -24,6 +24,17 @@ sources that wasted your time, not only ones that paid off.
 
 ---
 
+## The custom skill: `inbox-sync`
+
+Included at [`skills/inbox-sync/`](../skills/inbox-sync/). Reads the email
+account you apply with (confirmations, rejections, interview invites,
+assessments, offers, applications you sent) and brings the board up to date
+through `scripts/apply_inbox_actions.py`, which never moves a status backwards
+and never creates a duplicate company folder. Setup is in the README under
+**Connect your email**.
+
+---
+
 ## The document pack: ResumeSkills
 
 Install from [github.com/Paramchoudhary/ResumeSkills](https://github.com/Paramchoudhary/ResumeSkills)
