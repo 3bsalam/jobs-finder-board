@@ -255,6 +255,9 @@ instructions in **[docs/SKILLS.md](docs/SKILLS.md)**.
 - **[`skills/job-hunt/`](skills/job-hunt/)**, bundled here. Encodes the gate-first
   workflow, plus a `references/sources.md` for recording what has actually
   worked, ranked by outcome rather than traffic.
+- **[`skills/inbox-sync/`](skills/inbox-sync/)**, bundled here. Reads your
+  application email and updates the board. See
+  [Connect your email](#connect-your-email-inbox-sync-optional).
 - **[ResumeSkills](https://github.com/Paramchoudhary/ResumeSkills)**, an
   open-source pack of 23 skills for the document work:
   `job-description-analyzer`, `resume-tailor`, `resume-bullet-writer`,
@@ -266,6 +269,57 @@ instructions in **[docs/SKILLS.md](docs/SKILLS.md)**.
 **One rule that matters more than any skill:** never let a tool invent a number.
 Keep one file with your real figures and verify every CV against it, because an
 estimated metric is a claim you cannot defend in an interview.
+
+---
+
+## Connect your email: inbox sync (optional)
+
+Nearly every application sends a confirmation email, and every outcome arrives
+by email: rejections, interview invites, assessments, offers. The bundled
+**[`skills/inbox-sync/`](skills/inbox-sync/)** skill reads that mail and brings
+the board up to date, so you never re-type an application you made by hand.
+
+**Connect the account you apply with, not your work account.** This is the most
+common mistake: the assistant searches the wrong inbox and reports "no updates".
+
+### Connect Gmail (Claude)
+
+1. In the Claude app (or claude.ai), open **Settings → Connectors** and connect
+   **Gmail**.
+2. Sign in with the **Google account you use for job applications**, and allow
+   access.
+3. Connectors on your Claude account are available in Claude Code too. In a
+   terminal session, `/mcp` lists what is connected.
+4. Test it: ask *"search my email for 'thank you for applying' from the last
+   week and tell me which address the results were sent to"*. The address must
+   be your job-search one.
+5. To switch accounts later, disconnect Gmail in **Settings → Connectors** and
+   connect again with the other account.
+
+Using a different assistant? Any Gmail MCP server works the same way: the skill
+only needs search and read.
+
+### Use it
+
+Ask *"check my email and update the board"*. The assistant reads confirmations,
+rejections, invites and your sent applications, writes an action list, and
+applies it with:
+
+```bash
+python3 scripts/apply_inbox_actions.py inbox-actions.json --dry-run
+python3 scripts/apply_inbox_actions.py inbox-actions.json
+```
+
+The script is strict on purpose: statuses never move backwards, a company never
+gets a second folder (another role becomes a note), each applied job gets a
+follow-up date two weeks out, and re-running the same list changes nothing.
+
+**Privacy.** The skill is read-only on your mailbox: no sending, labelling or
+deleting. `inbox-actions.json` names companies, so it is gitignored. Mail that
+is not about your job search is ignored, not reported.
+
+**What it cannot see:** LinkedIn Easy Apply often sends no confirmation email.
+Add those by hand.
 
 ---
 
